@@ -1,6 +1,7 @@
 local M = {}
 
 M.closed = false
+M.enabled = false
 
 local function determine_os()
     if vim.fn.has("macunix") == 1 then
@@ -127,6 +128,9 @@ local function get_current_select(cmd)
 end
 
 local function change_im_select(cmd, method)
+    if not M.enabled then
+        return
+    end
     local args = { unpack(cmd, 2) }
 
     if cmd[1]:find("fcitx5-remote", 1, true) then
@@ -153,7 +157,7 @@ local function change_im_select(cmd, method)
         end)
     )
     if not handle then
-        vim.api.nvim_err_writeln([[[im-select]: Failed to spawn process for ]] .. cmd)
+        vim.notify([[[im-select]: Failed to spawn process for ]] .. cmd, vim.log.levels.ERROR, nil)
     end
 
     if not C.async_switch_im then
@@ -191,7 +195,11 @@ M.setup = function(opts)
 
     if vim.fn.executable(C.default_command[1]) ~= 1 then
         if not C.keep_quiet_on_no_binary then
-            vim.api.nvim_err_writeln([[[im-select]: binary tools missed, please follow installation manual in README]])
+            vim.notify(
+                "[[[im-select]: binary tools missed, please follow installation manual in README]]",
+                vim.log.levels.ERROR,
+                nil
+            )
         end
         return
     end
@@ -213,5 +221,10 @@ M.setup = function(opts)
         })
     end
 end
+
+vim.api.nvim_create_user_command("ImSelectToggle", function()
+    M.enabled = not M.enabled
+    vim.notify("IM-Selected " .. (M.enabled and "enabled" or "disabled"), vim.log.levels.INFO, nil)
+end, {})
 
 return M
